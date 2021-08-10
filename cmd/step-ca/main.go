@@ -21,7 +21,7 @@ import (
 	"github.com/urfave/cli"
 	"go.step.sm/cli-utils/command"
 	"go.step.sm/cli-utils/command/version"
-	"go.step.sm/cli-utils/config"
+	"go.step.sm/cli-utils/step"
 	"go.step.sm/cli-utils/usage"
 
 	// Enabled kms interfaces.
@@ -47,7 +47,7 @@ var (
 )
 
 func init() {
-	config.Set("Smallstep CA", Version, BuildTime)
+	step.Set("Smallstep CA", Version, BuildTime)
 	authority.GlobalVersion.Version = Version
 	rand.Seed(time.Now().UnixNano())
 }
@@ -105,7 +105,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "step-ca"
 	app.HelpName = "step-ca"
-	app.Version = config.Version()
+	app.Version = step.Version()
 	app.Usage = "an online certificate authority for secure automated certificate management"
 	app.UsageText = `**step-ca** <config> [**--password-file**=<file>] [**--issuer-password-file**=<file>] [**--resolver**=<addr>] [**--help**] [**--version**]`
 	app.Description = `**step-ca** runs the Step Online Certificate Authority
