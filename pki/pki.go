@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"html"
+	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -62,6 +63,12 @@ func GetDBPath() string {
 // based on the STEPPATH environment variable.
 func GetConfigPath() string {
 	return filepath.Join(step.Path(), configPath)
+}
+
+// GetProfileConfigPath returns the directory where the profile configuration
+// files are stored based on the STEPPATH environment variable.
+func GetProfileConfigPath() string {
+	return filepath.Join(step.ProfilePath(), configPath)
 }
 
 // GetPublicPath returns the directory where the public keys are stored based on
@@ -136,20 +143,20 @@ func GetProvisionerKey(caURL, rootFile, kid string) (string, error) {
 
 // PKI represents the Public Key Infrastructure used by a certificate authority.
 type PKI struct {
-	casOptions                     apiv1.Options
-	caCreator                      apiv1.CertificateAuthorityCreator
-	root, rootKey, rootFingerprint string
-	intermediate, intermediateKey  string
-	sshHostPubKey, sshHostKey      string
-	sshUserPubKey, sshUserKey      string
-	config, defaults               string
-	ottPublicKey                   *jose.JSONWebKey
-	ottPrivateKey                  *jose.JSONWebEncryption
-	provisioner                    string
-	address                        string
-	dnsNames                       []string
-	caURL                          string
-	enableSSH                      bool
+	casOptions                        apiv1.Options
+	caCreator                         apiv1.CertificateAuthorityCreator
+	root, rootKey, rootFingerprint    string
+	intermediate, intermediateKey     string
+	sshHostPubKey, sshHostKey         string
+	sshUserPubKey, sshUserKey         string
+	config, defaults, profileDefaults string
+	ottPublicKey                      *jose.JSONWebKey
+	ottPrivateKey                     *jose.JSONWebEncryption
+	provisioner                       string
+	address                           string
+	dnsNames                          []string
+	caURL                             string
+	enableSSH                         bool
 }
 
 // New creates a new PKI configuration.
@@ -186,6 +193,22 @@ func New(opts apiv1.Options) (*PKI, error) {
 		address:     "127.0.0.1:9000",
 		dnsNames:    []string{"127.0.0.1"},
 	}
+
+	// Create profile directory and stub for default profile configuration.
+	if currentCtx := step.GetCurrentContext(); currentCtx != nil {
+		profile := GetProfileConfigPath()
+		if err := os.MkdirAll(profile, 0700); err != nil {
+			return nil, errs.FileError(err, profile)
+		}
+		if p.profileDefaults, err = getPath(profile, "defaults.json"); err != nil {
+			return nil, err
+		}
+		if err := ioutil.WriteFile(p.profileDefaults,
+			[]byte("{}"), 0600); err != nil {
+			return nil, err
+		}
+	}
+
 	if p.root, err = getPath(public, "root_ca.crt"); err != nil {
 		return nil, err
 	}
@@ -641,6 +664,9 @@ func (p *PKI) Save(opt ...Option) error {
 	}
 
 	ui.PrintSelected("Default configuration", p.defaults)
+	if p.profileDefaults != "" {
+		ui.PrintSelected("Profile default configuration", p.profileDefaults)
+	}
 	ui.PrintSelected("Certificate Authority configuration", p.config)
 	ui.Println()
 	if p.casOptions.Is(apiv1.SoftCAS) {
