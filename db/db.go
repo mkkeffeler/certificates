@@ -468,20 +468,22 @@ func (m *MockAuthDB) Shutdown() error {
 
 // MockNoSQLDB //
 type MockNoSQLDB struct {
-	Err                         error
-	Ret1, Ret2                  interface{}
-	MGet                        func(bucket, key []byte) ([]byte, error)
-	MSet                        func(bucket, key, value []byte) error
-	MSetX509Certificate         func(bucket, key, value []byte, notBefore time.Time, notAfter time.Time, province []string, locality []string, country []string, organization []string, organizationalUnit []string, commonName string, issuer string, extensions []map[interface{}]interface{}, sans []map[interface{}]interface{}, extensionBucket []byte, dnsNameBucket []byte) error
-	MOpen                       func(dataSourceName string, opt ...database.Option) error
-	MClose                      func() error
-	MCreateX509CertificateTable func(bucket []byte) error
-	MCreateTable                func(bucket []byte) error
-	MDeleteTable                func(bucket []byte) error
-	MDel                        func(bucket, key []byte) error
-	MList                       func(bucket []byte) ([]*database.Entry, error)
-	MUpdate                     func(tx *database.Tx) error
-	MCmpAndSwap                 func(bucket, key, old, newval []byte) ([]byte, bool, error)
+	Err                                   error
+	Ret1, Ret2                            interface{}
+	MGet                                  func(bucket, key []byte) ([]byte, error)
+	MSet                                  func(bucket, key, value []byte) error
+	MSetX509Certificate                   func(bucket, key, value []byte, notBefore time.Time, notAfter time.Time, province []string, locality []string, country []string, organization []string, organizationalUnit []string, commonName string, issuer string, extensions []map[interface{}]interface{}, sans []map[interface{}]interface{}, extensionBucket []byte, dnsNameBucket []byte) error
+	MOpen                                 func(dataSourceName string, opt ...database.Option) error
+	MClose                                func() error
+	MCreateX509CertificateTable           func(bucket []byte) error
+	MCreateX509CertificateExtensionsTable func(bucket []byte) error
+	MCreateX509CertificateSansTable       func(bucket []byte) error
+	MCreateTable                          func(bucket []byte) error
+	MDeleteTable                          func(bucket []byte) error
+	MDel                                  func(bucket, key []byte) error
+	MList                                 func(bucket []byte) ([]*database.Entry, error)
+	MUpdate                               func(tx *database.Tx) error
+	MCmpAndSwap                           func(bucket, key, old, newval []byte) ([]byte, bool, error)
 }
 
 // CmpAndSwap mock
@@ -550,6 +552,22 @@ func (m *MockNoSQLDB) CreateTable(bucket []byte) error {
 func (m *MockNoSQLDB) CreateX509CertificateTable(bucket []byte) error {
 	if m.MCreateX509CertificateTable != nil {
 		return m.MCreateX509CertificateTable(bucket)
+	}
+	return m.Err
+}
+
+// CreateX509CertificateExtensionsTable mock
+func (m *MockNoSQLDB) CreateX509CertificateExtensionsTable(bucket []byte) error {
+	if m.MCreateX509CertificateExtensionsTable != nil {
+		return m.CreateX509CertificateExtensionsTable(bucket)
+	}
+	return m.Err
+}
+
+// CreateX509CertificateSansTable mock
+func (m *MockNoSQLDB) CreateX509CertificateSansTable(bucket []byte) error {
+	if m.MCreateX509CertificateSansTable != nil {
+		return m.CreateX509CertificateSansTable(bucket)
 	}
 	return m.Err
 }

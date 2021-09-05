@@ -148,6 +148,16 @@ func (s *SimpleDB) CreateX509CertificateTable(bucket []byte) error {
 	return ErrNotImplemented
 }
 
+// CreateX509CertificateExtensionsTable creates a table or a bucket in the database.
+func (s *SimpleDB) CreateX509CertificateExtensionsTable(bucket []byte) error {
+	return ErrNotImplemented
+}
+
+// CreateX509CertificateSansTable creates a table or a bucket in the database.
+func (s *SimpleDB) CreateX509CertificateSansTable(bucket []byte) error {
+	return ErrNotImplemented
+}
+
 // DeleteTable deletes a table or a bucket in the database.
 func (s *SimpleDB) DeleteTable(bucket []byte) error {
 	return ErrNotImplemented
