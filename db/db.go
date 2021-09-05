@@ -2,6 +2,7 @@ package db
 
 import (
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -15,6 +16,8 @@ import (
 
 var (
 	certsTable             = []byte("x509_certs")
+	certSANsTable          = []byte("x509_sans")
+	certExtensionsTable    = []byte("x509_extensions")
 	revokedCertsTable      = []byte("revoked_x509_certs")
 	revokedSSHCertsTable   = []byte("revoked_ssh_certs")
 	usedOTTTable           = []byte("used_ott")
@@ -94,6 +97,14 @@ func New(c *Config) (AuthDB, error) {
 	if err := db.CreateX509CertificateTable(certsTable); err != nil {
 		return nil, errors.Wrapf(err, "error creating table %s",
 			string(certsTable))
+	}
+	if err := db.CreateX509CertificateSansTable(certSANsTable); err != nil {
+		return nil, errors.Wrapf(err, "error creating table %s",
+			string(certSANsTable))
+	}
+	if err := db.CreateX509CertificateExtensionsTable(certExtensionsTable); err != nil {
+		return nil, errors.Wrapf(err, "error creating table %s",
+			string(certSANsTable))
 	}
 
 	return &DB{db, true}, nil
@@ -206,9 +217,57 @@ func (db *DB) GetCertificate(serialNumber string) (*x509.Certificate, error) {
 	return cert, nil
 }
 
+// ExtensiontoList takes a list of Extensions and converts them to a list of strings to go into the database.
+func ExtensiontoList(extensions []pkix.Extension) []map[interface{}]interface{} {
+	var (
+		response []map[interface{}]interface{}
+	)
+	for _, extension := range extensions {
+		response = append(response, map[interface{}]interface{}{
+			"type":  extension.Id.String(),
+			"value": string(extension.Id.String()),
+		})
+	}
+	return response
+
+}
+
+// SansToList takes a CRT and converts All the Sans into an array that can be parsed.
+func SansToList(crt *x509.Certificate) []map[interface{}]interface{} {
+	var (
+		response []map[interface{}]interface{}
+	)
+	for _, dnsName := range crt.DNSNames {
+		response = append(response, map[interface{}]interface{}{
+			"type":  "dnsName",
+			"value": dnsName,
+		})
+	}
+	for _, email := range crt.EmailAddresses {
+		response = append(response, map[interface{}]interface{}{
+			"type":  "email",
+			"value": email,
+		})
+	}
+	for _, ipaddr := range crt.IPAddresses {
+		response = append(response, map[interface{}]interface{}{
+			"type":  "ipAddress",
+			"value": ipaddr.String(),
+		})
+	}
+	for _, uri := range crt.URIs {
+		response = append(response, map[interface{}]interface{}{
+			"type":  "uri",
+			"value": uri.String(),
+		})
+	}
+	return response
+
+}
+
 // StoreCertificate stores a certificate PEM.
 func (db *DB) StoreCertificate(crt *x509.Certificate) error {
-	if err := db.SetX509Certificate(certsTable, []byte(crt.SerialNumber.String()), crt.Raw, crt.NotBefore, crt.NotAfter, crt.Subject.Province, crt.Subject.Locality, crt.Subject.Country, crt.Subject.Organization, crt.Subject.OrganizationalUnit, crt.Subject.CommonName, crt.Issuer.String()); err != nil {
+	if err := db.SetX509Certificate(certsTable, []byte(crt.SerialNumber.String()), crt.Raw, crt.NotBefore, crt.NotAfter, crt.Subject.Province, crt.Subject.Locality, crt.Subject.Country, crt.Subject.Organization, crt.Subject.OrganizationalUnit, crt.Subject.CommonName, crt.Issuer.String(), ExtensiontoList(crt.Extensions), SansToList(crt), certExtensionsTable, certSANsTable); err != nil {
 		return errors.Wrap(err, "database Set error")
 	}
 	return nil
@@ -413,7 +472,7 @@ type MockNoSQLDB struct {
 	Ret1, Ret2                  interface{}
 	MGet                        func(bucket, key []byte) ([]byte, error)
 	MSet                        func(bucket, key, value []byte) error
-	MSetX509Certificate         func(bucket, key, value []byte, notBefore time.Time, notAfter time.Time, province []string, locality []string, country []string, organization []string, organizationalUnit []string, commonName string, issuer string) error
+	MSetX509Certificate         func(bucket, key, value []byte, notBefore time.Time, notAfter time.Time, province []string, locality []string, country []string, organization []string, organizationalUnit []string, commonName string, issuer string, extensions []map[interface{}]interface{}, sans []map[interface{}]interface{}, extensionBucket []byte, dnsNameBucket []byte) error
 	MOpen                       func(dataSourceName string, opt ...database.Option) error
 	MClose                      func() error
 	MCreateX509CertificateTable func(bucket []byte) error
@@ -456,9 +515,9 @@ func (m *MockNoSQLDB) Set(bucket, key, value []byte) error {
 }
 
 // SetX509Certificate mock
-func (m *MockNoSQLDB) SetX509Certificate(bucket, key, value []byte, notBefore time.Time, notAfter time.Time, province []string, locality []string, country []string, organization []string, organizationalUnit []string, commonName string, issuer string) error {
+func (m *MockNoSQLDB) SetX509Certificate(bucket, key, value []byte, notBefore time.Time, notAfter time.Time, province []string, locality []string, country []string, organization []string, organizationalUnit []string, commonName string, issuer string, extensions []map[interface{}]interface{}, sans []map[interface{}]interface{}, extensionBucket []byte, dnsNameBucket []byte) error {
 	if m.MSetX509Certificate != nil {
-		return m.MSetX509Certificate(bucket, key, value, notBefore, notAfter, province, locality, country, organization, organizationalUnit, commonName, issuer)
+		return m.MSetX509Certificate(bucket, key, value, notBefore, notAfter, province, locality, country, organization, organizationalUnit, commonName, issuer, extensions, sans, extensionBucket, dnsNameBucket)
 	}
 	return m.Err
 }
