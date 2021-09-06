@@ -51,7 +51,9 @@ type AuthDB interface {
 	Revoke(rci *RevokedCertificateInfo) error
 	RevokeSSH(rci *RevokedCertificateInfo) error
 	GetCertificate(serialNumber string) (*x509.Certificate, error)
+	GetCertificatePage(limit int, offset int) ([]*database.Entry, error)
 	StoreCertificate(crt *x509.Certificate) error
+	GetCertificateSignedCount() (int, error)
 	UseToken(id, tok string) (bool, error)
 	IsSSHHost(name string) (bool, error)
 	StoreSSHCertificate(crt *ssh.Certificate) error
@@ -217,6 +219,15 @@ func (db *DB) GetCertificate(serialNumber string) (*x509.Certificate, error) {
 	return cert, nil
 }
 
+// GetCertificatePage retrieves a page of certs.
+func (db *DB) GetCertificatePage(limit int, offset int) ([]*database.Entry, error) {
+	dbEntries, err := db.ListPage(certsTable, limit, offset)
+	if err != nil {
+		return nil, errors.Wrap(err, "error loading certificates")
+	}
+	return dbEntries, nil
+}
+
 // ExtensiontoList takes a list of Extensions and converts them to a list of strings to go into the database.
 func ExtensiontoList(extensions []pkix.Extension) []map[interface{}]interface{} {
 	var (
@@ -263,6 +274,15 @@ func SansToList(crt *x509.Certificate) []map[interface{}]interface{} {
 	}
 	return response
 
+}
+
+// GetCertificateSignedCount stores a certificate PEM.
+func (db *DB) GetCertificateSignedCount() (int, error) {
+	count, err := db.Count(certsTable)
+	if err != nil {
+		return 0, errors.Wrap(err, "database Count error")
+	}
+	return count, nil
 }
 
 // StoreCertificate stores a certificate PEM.
@@ -360,19 +380,21 @@ func (db *DB) Shutdown() error {
 
 // MockAuthDB mocks the AuthDB interface. //
 type MockAuthDB struct {
-	Err                   error
-	Ret1                  interface{}
-	MIsRevoked            func(string) (bool, error)
-	MIsSSHRevoked         func(string) (bool, error)
-	MRevoke               func(rci *RevokedCertificateInfo) error
-	MRevokeSSH            func(rci *RevokedCertificateInfo) error
-	MGetCertificate       func(serialNumber string) (*x509.Certificate, error)
-	MStoreCertificate     func(crt *x509.Certificate) error
-	MUseToken             func(id, tok string) (bool, error)
-	MIsSSHHost            func(principal string) (bool, error)
-	MStoreSSHCertificate  func(crt *ssh.Certificate) error
-	MGetSSHHostPrincipals func() ([]string, error)
-	MShutdown             func() error
+	Err                        error
+	Ret1                       interface{}
+	MIsRevoked                 func(string) (bool, error)
+	MIsSSHRevoked              func(string) (bool, error)
+	MRevoke                    func(rci *RevokedCertificateInfo) error
+	MRevokeSSH                 func(rci *RevokedCertificateInfo) error
+	MGetCertificate            func(serialNumber string) (*x509.Certificate, error)
+	MGetCertificateSignedCount func() (int, error)
+	MGetCertificatePage        func(limit int, offset int) ([]*database.Entry, error)
+	MStoreCertificate          func(crt *x509.Certificate) error
+	MUseToken                  func(id, tok string) (bool, error)
+	MIsSSHHost                 func(principal string) (bool, error)
+	MStoreSSHCertificate       func(crt *ssh.Certificate) error
+	MGetSSHHostPrincipals      func() ([]string, error)
+	MShutdown                  func() error
 }
 
 // IsRevoked mock.
@@ -424,6 +446,22 @@ func (m *MockAuthDB) GetCertificate(serialNumber string) (*x509.Certificate, err
 		return m.MGetCertificate(serialNumber)
 	}
 	return m.Ret1.(*x509.Certificate), m.Err
+}
+
+// GetCertificateSignedCount mock.
+func (m *MockAuthDB) GetCertificateSignedCount() (int, error) {
+	if m.MGetCertificateSignedCount != nil {
+		return m.MGetCertificateSignedCount()
+	}
+	return m.Ret1.(int), m.Err
+}
+
+// GetCertificatePage mock.
+func (m *MockAuthDB) GetCertificatePage(limit int, offset int) ([]*database.Entry, error) {
+	if m.MGetCertificatePage != nil {
+		return m.MGetCertificatePage(limit, offset)
+	}
+	return m.Ret1.([]*database.Entry), m.Err
 }
 
 // StoreCertificate mock.

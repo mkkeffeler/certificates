@@ -46,6 +46,16 @@ func (s *SimpleDB) RevokeSSH(rci *RevokedCertificateInfo) error {
 	return ErrNotImplemented
 }
 
+// GetCertificatePage returns a "NotImplemented" error.
+func (s *SimpleDB) GetCertificatePage(limit int, offset int) ([]*database.Entry, error) {
+	return nil, ErrNotImplemented
+}
+
+// GetCertificateSignedCount returns a "NotImplemented" error.
+func (s *SimpleDB) GetCertificateSignedCount() (int, error) {
+	return 0, ErrNotImplemented
+}
+
 // GetCertificate returns a "NotImplemented" error.
 func (s *SimpleDB) GetCertificate(serialNumber string) (*x509.Certificate, error) {
 	return nil, ErrNotImplemented
