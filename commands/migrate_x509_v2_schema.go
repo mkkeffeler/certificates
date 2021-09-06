@@ -35,7 +35,7 @@ $ step-ca migrate-x509-v2-schema <configFile>
 
 func migrateX509Action(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return cli.ShowCommandHelp(ctx, "onboard")
+		return cli.ShowCommandHelp(ctx, "migrate-x509-v2-schema")
 	}
 	if err := errs.NumberOfArguments(ctx, 1); err != nil {
 		return err
