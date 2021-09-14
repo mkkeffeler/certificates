@@ -3,6 +3,7 @@ package db
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -30,6 +31,13 @@ var (
 // ErrAlreadyExists can be returned if the DB attempts to set a key that has
 // been previously set.
 var ErrAlreadyExists = errors.New("already exists")
+
+type stepProvisionerASN1 struct {
+	Type          int
+	Name          []byte
+	CredentialID  []byte
+	KeyValuePairs []string `asn1:"optional,omitempty"`
+}
 
 // Config represents the JSON attributes used for configuring a step-ca DB.
 type Config struct {
@@ -123,6 +131,11 @@ type RevokedCertificateInfo struct {
 	TokenID       string
 	MTLS          bool
 }
+
+var (
+	stepOIDRoot        = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 37476, 9000, 64}
+	stepOIDProvisioner = append(asn1.ObjectIdentifier(nil), append(stepOIDRoot, 1)...)
+)
 
 // IsRevoked returns whether or not a certificate with the given identifier
 // has been revoked.
@@ -287,7 +300,19 @@ func (db *DB) GetCertificateSignedCount() (int, error) {
 
 // StoreCertificate stores a certificate PEM.
 func (db *DB) StoreCertificate(crt *x509.Certificate) error {
-	if err := db.SetX509Certificate(certsTable, []byte(crt.SerialNumber.String()), crt.Raw, crt.NotBefore, crt.NotAfter, crt.Subject.Province, crt.Subject.Locality, crt.Subject.Country, crt.Subject.Organization, crt.Subject.OrganizationalUnit, crt.Subject.CommonName, crt.Issuer.String(), ExtensiontoList(crt.Extensions), SansToList(crt), certExtensionsTable, certSANsTable); err != nil {
+	var provisioner stepProvisionerASN1
+	for _, e := range crt.Extensions {
+		if e.Id.Equal(stepOIDProvisioner) {
+			if _, err := asn1.Unmarshal(e.Value, &provisioner); err != nil {
+				return errors.Wrap(err, "Cert did not unmarshal.")
+			}
+		}
+	}
+	if provisioner.Name == nil {
+		provisioner.Name = []byte("NA")
+	}
+
+	if err := db.SetX509Certificate(certsTable, []byte(crt.SerialNumber.String()), crt.Raw, crt.NotBefore, crt.NotAfter, crt.Subject.Province, crt.Subject.Locality, crt.Subject.Country, crt.Subject.Organization, crt.Subject.OrganizationalUnit, crt.Subject.CommonName, crt.Issuer.String(), ExtensiontoList(crt.Extensions), SansToList(crt), certExtensionsTable, certSANsTable, string(provisioner.Name)); err != nil {
 		return errors.Wrap(err, "database Set error")
 	}
 	return nil
