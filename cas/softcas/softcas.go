@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -85,14 +83,12 @@ func (c *SoftCAS) CreateCertificate(overrideCert string, overrideKey string, req
 
 	}
 	var cert *x509.Certificate
-	fmt.Fprintf(os.Stderr, "WE IN HERE")
 	Chain, err := pemutil.ReadCertificateBundle("/Users/mkeffele/.step/certs/new_intermediate.crt")
 	if err != nil {
 		return nil, err
 	}
 
 	if overrideSigner != nil {
-		fmt.Fprintf(os.Stderr, "WE TOOK IT")
 		cert, err = x509util.CreateCertificate(req.Template, Chain[0], overrideSigner.Public(), overrideSigner)
 	} else {
 		cert, err = x509util.CreateCertificate(req.Template, c.CertificateChain[0], req.Template.PublicKey, c.Signer)
