@@ -270,10 +270,10 @@ func (p *Azure) authorizeToken(token string) (*azurePayload, string, string, err
 
 // AuthorizeSign validates the given token and returns the sign options that
 // will be used on certificate creation.
-func (p *Azure) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
+func (p *Azure) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, errr error) {
 	_, name, group, err := p.authorizeToken(token)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "azure.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "azure.AuthorizeSign")
 	}
 
 	// Filter by resource group
@@ -286,7 +286,7 @@ func (p *Azure) AuthorizeSign(ctx context.Context, token string) ([]SignOption, 
 			}
 		}
 		if !found {
-			return nil, errs.Unauthorized("azure.AuthorizeSign; azure token validation failed - invalid resource group")
+			return nil, "", "", errs.Unauthorized("azure.AuthorizeSign; azure token validation failed - invalid resource group")
 		}
 	}
 
@@ -315,7 +315,7 @@ func (p *Azure) AuthorizeSign(ctx context.Context, token string) ([]SignOption, 
 
 	templateOptions, err := CustomTemplateOptions(p.Options, data, x509util.DefaultIIDLeafTemplate)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "aws.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "aws.AuthorizeSign")
 	}
 
 	return append(so,
@@ -326,7 +326,7 @@ func (p *Azure) AuthorizeSign(ctx context.Context, token string) ([]SignOption, 
 		// validators
 		defaultPublicKeyValidator{},
 		newValidityValidator(p.claimer.MinTLSCertDuration(), p.claimer.MaxTLSCertDuration()),
-	), nil
+	), "", "", nil
 }
 
 // AuthorizeRenew returns an error if the renewal is disabled.

@@ -55,7 +55,7 @@ type AuthorityOptions struct {
 
 // SignAuthority is the interface for a signing authority
 type SignAuthority interface {
-	Sign(cr *x509.CertificateRequest, opts provisioner.SignOptions, signOpts ...provisioner.SignOption) ([]*x509.Certificate, error)
+	Sign(overrideCert string, overrideKey string, cr *x509.CertificateRequest, opts provisioner.SignOptions, signOpts ...provisioner.SignOption) ([]*x509.Certificate, error)
 	LoadProvisionerByID(string) (provisioner.Interface, error)
 }
 
@@ -262,7 +262,7 @@ func (a *Authority) SignCSR(ctx context.Context, csr *x509.CertificateRequest, m
 
 	// Get authorizations from the SCEP provisioner.
 	ctx = provisioner.NewContextWithMethod(ctx, provisioner.SignMethod)
-	signOps, err := p.AuthorizeSign(ctx, "")
+	signOps, overrideCert, overrideKey, err := p.AuthorizeSign(ctx, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "error retrieving authorization options from SCEP provisioner")
 	}
@@ -278,7 +278,7 @@ func (a *Authority) SignCSR(ctx context.Context, csr *x509.CertificateRequest, m
 	}
 	signOps = append(signOps, templateOptions)
 
-	certChain, err := a.signAuth.Sign(csr, opts, signOps...)
+	certChain, err := a.signAuth.Sign(overrideCert, overrideKey, csr, opts, signOps...)
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating certificate for order")
 	}

@@ -8,7 +8,7 @@ import (
 // CertificateAuthorityService is the interface implemented to support external
 // certificate authorities.
 type CertificateAuthorityService interface {
-	CreateCertificate(req *CreateCertificateRequest) (*CreateCertificateResponse, error)
+	CreateCertificate(overrideCert string, overrideKey string, req *CreateCertificateRequest) (*CreateCertificateResponse, error)
 	RenewCertificate(req *RenewCertificateRequest) (*RenewCertificateResponse, error)
 	RevokeCertificate(req *RevokeCertificateRequest) (*RevokeCertificateResponse, error)
 }

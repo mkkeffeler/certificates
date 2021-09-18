@@ -188,7 +188,7 @@ func (c *CloudCAS) GetCertificateAuthority(req *apiv1.GetCertificateAuthorityReq
 }
 
 // CreateCertificate signs a new certificate using Google Cloud CAS.
-func (c *CloudCAS) CreateCertificate(req *apiv1.CreateCertificateRequest) (*apiv1.CreateCertificateResponse, error) {
+func (c *CloudCAS) CreateCertificate(overrideCert string, overrideKey string, req *apiv1.CreateCertificateRequest) (*apiv1.CreateCertificateResponse, error) {
 	switch {
 	case req.Template == nil:
 		return nil, errors.New("createCertificateRequest `template` cannot be nil")

@@ -194,10 +194,10 @@ func (p *X5C) AuthorizeRevoke(ctx context.Context, token string) error {
 }
 
 // AuthorizeSign validates the given token.
-func (p *X5C) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
+func (p *X5C) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
 	claims, err := p.authorizeToken(token, p.audiences.Sign)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "x5c.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "x5c.AuthorizeSign")
 	}
 
 	// NOTE: This is for backwards compatibility with older versions of cli
@@ -215,7 +215,7 @@ func (p *X5C) AuthorizeSign(ctx context.Context, token string) ([]SignOption, er
 
 	templateOptions, err := TemplateOptions(p.Options, data)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "jwk.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "jwk.AuthorizeSign")
 	}
 
 	return []SignOption{
@@ -229,7 +229,7 @@ func (p *X5C) AuthorizeSign(ctx context.Context, token string) ([]SignOption, er
 		defaultSANsValidator(claims.SANs),
 		defaultPublicKeyValidator{},
 		newValidityValidator(p.claimer.MinTLSCertDuration(), p.claimer.MaxTLSCertDuration()),
-	}, nil
+	}, "", "", nil
 }
 
 // AuthorizeRenew returns an error if the renewal is disabled.

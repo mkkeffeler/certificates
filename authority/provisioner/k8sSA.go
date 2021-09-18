@@ -216,10 +216,10 @@ func (p *K8sSA) AuthorizeRevoke(ctx context.Context, token string) error {
 }
 
 // AuthorizeSign validates the given token.
-func (p *K8sSA) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
+func (p *K8sSA) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
 	claims, err := p.authorizeToken(token, p.audiences.Sign)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "k8ssa.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "k8ssa.AuthorizeSign")
 	}
 
 	// Add some values to use in custom templates.
@@ -233,7 +233,7 @@ func (p *K8sSA) AuthorizeSign(ctx context.Context, token string) ([]SignOption, 
 	// request.
 	templateOptions, err := CustomTemplateOptions(p.Options, data, x509util.DefaultAdminLeafTemplate)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "k8ssa.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "k8ssa.AuthorizeSign")
 	}
 
 	return []SignOption{
@@ -244,7 +244,7 @@ func (p *K8sSA) AuthorizeSign(ctx context.Context, token string) ([]SignOption, 
 		// validators
 		defaultPublicKeyValidator{},
 		newValidityValidator(p.claimer.MinTLSCertDuration(), p.claimer.MaxTLSCertDuration()),
-	}, nil
+	}, "", "", nil
 }
 
 // AuthorizeRenew returns an error if the renewal is disabled.

@@ -222,10 +222,10 @@ func (p *GCP) Init(config Config) error {
 
 // AuthorizeSign validates the given token and returns the sign options that
 // will be used on certificate creation.
-func (p *GCP) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
+func (p *GCP) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
 	claims, err := p.authorizeToken(token)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "gcp.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "gcp.AuthorizeSign")
 	}
 
 	ce := claims.Google.ComputeEngine
@@ -260,7 +260,7 @@ func (p *GCP) AuthorizeSign(ctx context.Context, token string) ([]SignOption, er
 
 	templateOptions, err := CustomTemplateOptions(p.Options, data, x509util.DefaultIIDLeafTemplate)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "gcp.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "gcp.AuthorizeSign")
 	}
 
 	return append(so,
@@ -271,7 +271,7 @@ func (p *GCP) AuthorizeSign(ctx context.Context, token string) ([]SignOption, er
 		// validators
 		defaultPublicKeyValidator{},
 		newValidityValidator(p.claimer.MinTLSCertDuration(), p.claimer.MaxTLSCertDuration()),
-	), nil
+	), "", "", nil
 }
 
 // AuthorizeRenew returns an error if the renewal is disabled.

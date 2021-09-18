@@ -37,8 +37,8 @@ func (p *noop) Init(config Config) error {
 	return nil
 }
 
-func (p *noop) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
-	return []SignOption{}, nil
+func (p *noop) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
+	return []SignOption{}, "", "", nil
 }
 
 func (p *noop) AuthorizeRenew(ctx context.Context, cert *x509.Certificate) error {

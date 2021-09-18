@@ -50,6 +50,12 @@ type X509Options struct {
 	// escaped in a string or it can be also encoded in base64.
 	Template string `json:"template,omitempty"`
 
+	//Int Cert
+	IntermediateCert string `json:"crt"`
+
+	//Int Key
+	IntermediateKey string `json:"key"`
+
 	// TemplateFile points to a file containing a X.509 certificate template.
 	TemplateFile string `json:"templateFile,omitempty"`
 

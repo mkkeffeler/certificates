@@ -151,10 +151,11 @@ func (p *JWK) AuthorizeRevoke(ctx context.Context, token string) error {
 }
 
 // AuthorizeSign validates the given token.
-func (p *JWK) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
+func (p *JWK) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
+
 	claims, err := p.authorizeToken(token, p.audiences.Sign)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "jwk.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "jwk.AuthorizeSign")
 	}
 
 	// NOTE: This is for backwards compatibility with older versions of cli
@@ -169,10 +170,9 @@ func (p *JWK) AuthorizeSign(ctx context.Context, token string) ([]SignOption, er
 	if v, err := unsafeParseSigned(token); err == nil {
 		data.SetToken(v)
 	}
-
 	templateOptions, err := TemplateOptions(p.Options, data)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "jwk.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "jwk.AuthorizeSign")
 	}
 
 	return []SignOption{
@@ -185,7 +185,7 @@ func (p *JWK) AuthorizeSign(ctx context.Context, token string) ([]SignOption, er
 		defaultPublicKeyValidator{},
 		defaultSANsValidator(claims.SANs),
 		newValidityValidator(p.claimer.MinTLSCertDuration(), p.claimer.MaxTLSCertDuration()),
-	}, nil
+	}, p.Options.X509.IntermediateCert, p.Options.X509.IntermediateKey, nil
 }
 
 // AuthorizeRenew returns an error if the renewal is disabled.

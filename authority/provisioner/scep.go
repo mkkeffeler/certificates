@@ -108,7 +108,7 @@ func (s *SCEP) Init(config Config) (err error) {
 // AuthorizeSign does not do any verification, because all verification is handled
 // in the SCEP protocol. This method returns a list of modifiers / constraints
 // on the resulting certificate.
-func (s *SCEP) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
+func (s *SCEP) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
 	return []SignOption{
 		// modifiers / withOptions
 		newProvisionerExtensionOption(TypeSCEP, s.Name, ""),
@@ -117,7 +117,7 @@ func (s *SCEP) AuthorizeSign(ctx context.Context, token string) ([]SignOption, e
 		// validators
 		newPublicKeyMinimumLengthValidator(s.MinimumPublicKeyLength),
 		newValidityValidator(s.claimer.MinTLSCertDuration(), s.claimer.MaxTLSCertDuration()),
-	}, nil
+	}, "", "", nil
 }
 
 // GetChallengePassword returns the challenge password

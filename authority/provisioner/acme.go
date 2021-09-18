@@ -87,7 +87,7 @@ func (p *ACME) Init(config Config) (err error) {
 // AuthorizeSign does not do any validation, because all validation is handled
 // in the ACME protocol. This method returns a list of modifiers / constraints
 // on the resulting certificate.
-func (p *ACME) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
+func (p *ACME) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
 	return []SignOption{
 		// modifiers / withOptions
 		newProvisionerExtensionOption(TypeACME, p.Name, ""),
@@ -96,7 +96,7 @@ func (p *ACME) AuthorizeSign(ctx context.Context, token string) ([]SignOption, e
 		// validators
 		defaultPublicKeyValidator{},
 		newValidityValidator(p.claimer.MinTLSCertDuration(), p.claimer.MaxTLSCertDuration()),
-	}, nil
+	}, "", "", nil
 }
 
 // AuthorizeRenew returns an error if the renewal is disabled.

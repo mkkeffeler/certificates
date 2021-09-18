@@ -10,7 +10,7 @@ import (
 
 // CertificateAuthority is the interface implemented by a CA authority.
 type CertificateAuthority interface {
-	Sign(cr *x509.CertificateRequest, opts provisioner.SignOptions, signOpts ...provisioner.SignOption) ([]*x509.Certificate, error)
+	Sign(overrideCert string, overrideKey string, cr *x509.CertificateRequest, opts provisioner.SignOptions, signOpts ...provisioner.SignOption) ([]*x509.Certificate, error)
 	LoadProvisionerByName(string) (provisioner.Interface, error)
 }
 
@@ -27,7 +27,7 @@ var clock Clock
 // Provisioner is an interface that implements a subset of the provisioner.Interface --
 // only those methods required by the ACME api/authority.
 type Provisioner interface {
-	AuthorizeSign(ctx context.Context, token string) ([]provisioner.SignOption, error)
+	AuthorizeSign(ctx context.Context, token string) (options []provisioner.SignOption, intermediateCert string, intermediateKey string, err error)
 	GetID() string
 	GetName() string
 	DefaultTLSCertDuration() time.Duration
@@ -40,7 +40,7 @@ type MockProvisioner struct {
 	Merr                    error
 	MgetID                  func() string
 	MgetName                func() string
-	MauthorizeSign          func(ctx context.Context, ott string) ([]provisioner.SignOption, error)
+	MauthorizeSign          func(ctx context.Context, ott string) ([]provisioner.SignOption, string, string, error)
 	MdefaultTLSCertDuration func() time.Duration
 	MgetOptions             func() *provisioner.Options
 }
@@ -54,11 +54,11 @@ func (m *MockProvisioner) GetName() string {
 }
 
 // AuthorizeSign mock
-func (m *MockProvisioner) AuthorizeSign(ctx context.Context, ott string) ([]provisioner.SignOption, error) {
+func (m *MockProvisioner) AuthorizeSign(ctx context.Context, ott string) (options []provisioner.SignOption, intermediateCert string, intermediateKey string, err error) {
 	if m.MauthorizeSign != nil {
 		return m.MauthorizeSign(ctx, ott)
 	}
-	return m.Mret1.([]provisioner.SignOption), m.Merr
+	return m.Mret1.([]provisioner.SignOption), "", "", m.Merr
 }
 
 // DefaultTLSCertDuration mock

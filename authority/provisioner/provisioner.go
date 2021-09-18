@@ -24,7 +24,7 @@ type Interface interface {
 	GetType() Type
 	GetEncryptedKey() (kid string, key string, ok bool)
 	Init(config Config) error
-	AuthorizeSign(ctx context.Context, token string) ([]SignOption, error)
+	AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error)
 	AuthorizeRevoke(ctx context.Context, token string) error
 	AuthorizeRenew(ctx context.Context, cert *x509.Certificate) error
 	AuthorizeSSHSign(ctx context.Context, token string) ([]SignOption, error)
@@ -302,8 +302,8 @@ type base struct{}
 
 // AuthorizeSign returns an unimplemented error. Provisioners should overwrite
 // this method if they will support authorizing tokens for signing x509 Certificates.
-func (b *base) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
-	return nil, errs.Unauthorized("provisioner.AuthorizeSign not implemented")
+func (b *base) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
+	return nil, "", "", errs.Unauthorized("provisioner.AuthorizeSign not implemented")
 }
 
 // AuthorizeRevoke returns an unimplemented error. Provisioners should overwrite
@@ -413,7 +413,7 @@ type MockProvisioner struct {
 	MgetType            func() Type
 	MgetEncryptedKey    func() (string, string, bool)
 	Minit               func(Config) error
-	MauthorizeSign      func(ctx context.Context, ott string) ([]SignOption, error)
+	MauthorizeSign      func(ctx context.Context, ott string) ([]SignOption, string, string, error)
 	MauthorizeRenew     func(ctx context.Context, cert *x509.Certificate) error
 	MauthorizeRevoke    func(ctx context.Context, ott string) error
 	MauthorizeSSHSign   func(ctx context.Context, ott string) ([]SignOption, error)
@@ -482,11 +482,11 @@ func (m *MockProvisioner) Init(c Config) error {
 }
 
 // AuthorizeSign mock
-func (m *MockProvisioner) AuthorizeSign(ctx context.Context, ott string) ([]SignOption, error) {
+func (m *MockProvisioner) AuthorizeSign(ctx context.Context, ott string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
 	if m.MauthorizeSign != nil {
 		return m.MauthorizeSign(ctx, ott)
 	}
-	return m.Mret1.([]SignOption), m.Merr
+	return m.Mret1.([]SignOption), "", "", m.Merr
 }
 
 // AuthorizeRevoke mock
@@ -506,11 +506,11 @@ func (m *MockProvisioner) AuthorizeRenew(ctx context.Context, c *x509.Certificat
 }
 
 // AuthorizeSSHSign mock
-func (m *MockProvisioner) AuthorizeSSHSign(ctx context.Context, ott string) ([]SignOption, error) {
+func (m *MockProvisioner) AuthorizeSSHSign(ctx context.Context, ott string) ([]SignOption, string, string, error) {
 	if m.MauthorizeSign != nil {
 		return m.MauthorizeSign(ctx, ott)
 	}
-	return m.Mret1.([]SignOption), m.Merr
+	return m.Mret1.([]SignOption), "", "", m.Merr
 }
 
 // AuthorizeSSHRenew mock

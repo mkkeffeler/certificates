@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -23,10 +24,13 @@ const DefaultCertValidity = 24 * time.Hour
 // SignOptions contains the options that can be passed to the Sign method. Backdate
 // is automatically filled and can only be configured in the CA.
 type SignOptions struct {
-	NotAfter     TimeDuration    `json:"notAfter"`
-	NotBefore    TimeDuration    `json:"notBefore"`
-	TemplateData json.RawMessage `json:"templateData"`
-	Backdate     time.Duration   `json:"-"`
+	NotAfter         TimeDuration    `json:"notAfter"`
+	NotBefore        TimeDuration    `json:"notBefore"`
+	TemplateData     json.RawMessage `json:"templateData"`
+	Signer           crypto.Signer   `json:"signer"`
+	Backdate         time.Duration   `json:"-"`
+	IntermediateCert string          `json:"intermediatecrt"`
+	IntermediateKey  string          `json:"intermediatekey"`
 }
 
 // SignOption is the interface used to collect all extra options used in the

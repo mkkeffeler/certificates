@@ -4,12 +4,15 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/smallstep/certificates/cas/apiv1"
 	"github.com/smallstep/certificates/kms"
 	kmsapi "github.com/smallstep/certificates/kms/apiv1"
+	"go.step.sm/crypto/pemutil"
 	"go.step.sm/crypto/x509util"
 )
 
@@ -50,7 +53,7 @@ func New(ctx context.Context, opts apiv1.Options) (*SoftCAS, error) {
 }
 
 // CreateCertificate signs a new certificate using Golang or KMS crypto.
-func (c *SoftCAS) CreateCertificate(req *apiv1.CreateCertificateRequest) (*apiv1.CreateCertificateResponse, error) {
+func (c *SoftCAS) CreateCertificate(overrideCert string, overrideKey string, req *apiv1.CreateCertificateRequest) (*apiv1.CreateCertificateResponse, error) {
 	switch {
 	case req.Template == nil:
 		return nil, errors.New("createCertificateRequest `template` cannot be nil")
@@ -68,7 +71,33 @@ func (c *SoftCAS) CreateCertificate(req *apiv1.CreateCertificateRequest) (*apiv1
 	}
 	req.Template.Issuer = c.CertificateChain[0].Subject
 
-	cert, err := x509util.CreateCertificate(req.Template, c.CertificateChain[0], req.Template.PublicKey, c.Signer)
+	var overrideSigner crypto.Signer
+	var err error
+
+	if overrideCert != "" {
+		overrideSigner, err = c.createSigner(&kmsapi.CreateSignerRequest{
+			SigningKey: overrideKey,
+			Password:   []byte(overrideCert),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+	}
+	var cert *x509.Certificate
+	fmt.Fprintf(os.Stderr, "WE IN HERE")
+	Chain, err := pemutil.ReadCertificateBundle("/Users/mkeffele/.step/certs/new_intermediate.crt")
+	if err != nil {
+		return nil, err
+	}
+
+	if overrideSigner != nil {
+		fmt.Fprintf(os.Stderr, "WE TOOK IT")
+		cert, err = x509util.CreateCertificate(req.Template, Chain[0], overrideSigner.Public(), overrideSigner)
+	} else {
+		cert, err = x509util.CreateCertificate(req.Template, c.CertificateChain[0], req.Template.PublicKey, c.Signer)
+
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +121,6 @@ func (c *SoftCAS) RenewCertificate(req *apiv1.RenewCertificateRequest) (*apiv1.R
 	req.Template.NotBefore = t.Add(-1 * req.Backdate)
 	req.Template.NotAfter = t.Add(req.Lifetime)
 	req.Template.Issuer = c.CertificateChain[0].Subject
-
 	cert, err := x509util.CreateCertificate(req.Template, c.CertificateChain[0], req.Template.PublicKey, c.Signer)
 	if err != nil {
 		return nil, err

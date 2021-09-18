@@ -429,10 +429,10 @@ func (p *AWS) Init(config Config) (err error) {
 
 // AuthorizeSign validates the given token and returns the sign options that
 // will be used on certificate creation.
-func (p *AWS) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
+func (p *AWS) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
 	payload, err := p.authorizeToken(token)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "aws.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "aws.AuthorizeSign")
 	}
 
 	doc := payload.document
@@ -463,7 +463,7 @@ func (p *AWS) AuthorizeSign(ctx context.Context, token string) ([]SignOption, er
 
 	templateOptions, err := CustomTemplateOptions(p.Options, data, x509util.DefaultIIDLeafTemplate)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "aws.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "aws.AuthorizeSign")
 	}
 
 	return append(so,
@@ -475,7 +475,7 @@ func (p *AWS) AuthorizeSign(ctx context.Context, token string) ([]SignOption, er
 		defaultPublicKeyValidator{},
 		commonNameValidator(payload.Claims.Subject),
 		newValidityValidator(p.claimer.MinTLSCertDuration(), p.claimer.MaxTLSCertDuration()),
-	), nil
+	), "", "", nil
 }
 
 // AuthorizeRenew returns an error if the renewal is disabled.

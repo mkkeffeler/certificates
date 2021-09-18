@@ -54,6 +54,7 @@ const (
 type CreateCertificateRequest struct {
 	Template  *x509.Certificate
 	CSR       *x509.CertificateRequest
+	signer    crypto.Signer
 	Lifetime  time.Duration
 	Backdate  time.Duration
 	RequestID string

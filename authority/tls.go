@@ -66,14 +66,13 @@ func withDefaultASN1DN(def *config.ASN1DN) provisioner.CertificateModifierFunc {
 }
 
 // Sign creates a signed certificate from a certificate signing request.
-func (a *Authority) Sign(csr *x509.CertificateRequest, signOpts provisioner.SignOptions, extraOpts ...provisioner.SignOption) ([]*x509.Certificate, error) {
+func (a *Authority) Sign(overrideCert string, overrideKey string, csr *x509.CertificateRequest, signOpts provisioner.SignOptions, extraOpts ...provisioner.SignOption) ([]*x509.Certificate, error) {
 	var (
 		certOptions    []x509util.Option
 		certValidators []provisioner.CertificateValidator
 		certModifiers  []provisioner.CertificateModifier
 		certEnforcers  []provisioner.CertificateEnforcer
 	)
-
 	opts := []interface{}{errs.WithKeyVal("csr", csr), errs.WithKeyVal("signOptions", signOpts)}
 	if err := csr.CheckSignature(); err != nil {
 		return nil, errs.Wrap(http.StatusBadRequest, err, "authority.Sign; invalid certificate request", opts...)
@@ -152,7 +151,7 @@ func (a *Authority) Sign(csr *x509.CertificateRequest, signOpts provisioner.Sign
 	}
 
 	lifetime := leaf.NotAfter.Sub(leaf.NotBefore.Add(signOpts.Backdate))
-	resp, err := a.x509CAService.CreateCertificate(&casapi.CreateCertificateRequest{
+	resp, err := a.x509CAService.CreateCertificate(overrideCert, overrideKey, &casapi.CreateCertificateRequest{
 		Template: leaf,
 		CSR:      csr,
 		Lifetime: lifetime,
@@ -492,7 +491,7 @@ func (a *Authority) GetTLSCertificate() (*tls.Certificate, error) {
 	certTpl.NotBefore = now.Add(-1 * time.Minute)
 	certTpl.NotAfter = now.Add(24 * time.Hour)
 
-	resp, err := a.x509CAService.CreateCertificate(&casapi.CreateCertificateRequest{
+	resp, err := a.x509CAService.CreateCertificate("", "", &casapi.CreateCertificateRequest{
 		Template: certTpl,
 		CSR:      cr,
 		Lifetime: 24 * time.Hour,

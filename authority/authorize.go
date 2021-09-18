@@ -202,7 +202,7 @@ func (a *Authority) Authorize(ctx context.Context, token string) ([]provisioner.
 
 	switch m := provisioner.MethodFromContext(ctx); m {
 	case provisioner.SignMethod:
-		signOpts, err := a.authorizeSign(ctx, token)
+		signOpts, _, _, err := a.authorizeSign(ctx, token)
 		return signOpts, errs.Wrap(http.StatusInternalServerError, err, "authority.Authorize", opts...)
 	case provisioner.RevokeMethod:
 		return nil, errs.Wrap(http.StatusInternalServerError, a.authorizeRevoke(ctx, token), "authority.Authorize", opts...)
@@ -233,16 +233,17 @@ func (a *Authority) Authorize(ctx context.Context, token string) ([]provisioner.
 
 // authorizeSign loads the provisioner from the token and calls the provisioner
 // AuthorizeSign method. Returns a list of methods to apply to the signing flow.
-func (a *Authority) authorizeSign(ctx context.Context, token string) ([]provisioner.SignOption, error) {
+func (a *Authority) authorizeSign(ctx context.Context, token string) (options []provisioner.SignOption, intermediateCert string, intermediateKey string, err error) {
 	p, err := a.authorizeToken(ctx, token)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "authority.authorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "authority.authorizeSign")
 	}
-	signOpts, err := p.AuthorizeSign(ctx, token)
+	signOpts, cert, key, err := p.AuthorizeSign(ctx, token)
+
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "authority.authorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "authority.authorizeSign")
 	}
-	return signOpts, nil
+	return signOpts, cert, key, nil
 }
 
 // AuthorizeSign authorizes a signature request by validating and authenticating
@@ -250,9 +251,12 @@ func (a *Authority) authorizeSign(ctx context.Context, token string) ([]provisio
 //
 // NOTE: This method is deprecated and should not be used. We make it available
 // in the short term os as not to break existing clients.
-func (a *Authority) AuthorizeSign(token string) ([]provisioner.SignOption, error) {
+func (a *Authority) AuthorizeSign(token string) (options []provisioner.SignOption, intermediateCert string, intermediateKey string, err error) {
 	ctx := provisioner.NewContextWithMethod(context.Background(), provisioner.SignMethod)
-	return a.Authorize(ctx, token)
+	p, err := a.authorizeToken(ctx, token)
+	signOpts, cert, key, err := p.AuthorizeSign(ctx, token)
+	//signOpts, err := a.Authorize(ctx, token)
+	return signOpts, cert, key, err
 }
 
 // authorizeRevoke locates the provisioner used to generate the authenticating

@@ -65,7 +65,7 @@ func New(ctx context.Context, opts apiv1.Options) (*StepCAS, error) {
 
 // CreateCertificate uses the step-ca sign request with the configured
 // provisioner to get a new certificate from the certificate authority.
-func (s *StepCAS) CreateCertificate(req *apiv1.CreateCertificateRequest) (*apiv1.CreateCertificateResponse, error) {
+func (s *StepCAS) CreateCertificate(overrideCert string, overrideKey string, req *apiv1.CreateCertificateRequest) (*apiv1.CreateCertificateResponse, error) {
 	switch {
 	case req.CSR == nil:
 		return nil, errors.New("createCertificateRequest `csr` cannot be nil")

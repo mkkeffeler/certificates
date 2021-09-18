@@ -320,10 +320,10 @@ func (o *OIDC) AuthorizeRevoke(ctx context.Context, token string) error {
 }
 
 // AuthorizeSign validates the given token.
-func (o *OIDC) AuthorizeSign(ctx context.Context, token string) ([]SignOption, error) {
+func (o *OIDC) AuthorizeSign(ctx context.Context, token string) (options []SignOption, intermediateCert string, intermediateKey string, err error) {
 	claims, err := o.authorizeToken(token)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "oidc.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "oidc.AuthorizeSign")
 	}
 
 	// Certificate templates
@@ -357,7 +357,7 @@ func (o *OIDC) AuthorizeSign(ctx context.Context, token string) ([]SignOption, e
 
 	templateOptions, err := CustomTemplateOptions(o.Options, data, defaultTemplate)
 	if err != nil {
-		return nil, errs.Wrap(http.StatusInternalServerError, err, "oidc.AuthorizeSign")
+		return nil, "", "", errs.Wrap(http.StatusInternalServerError, err, "oidc.AuthorizeSign")
 	}
 
 	return []SignOption{
@@ -368,7 +368,7 @@ func (o *OIDC) AuthorizeSign(ctx context.Context, token string) ([]SignOption, e
 		// validators
 		defaultPublicKeyValidator{},
 		newValidityValidator(o.claimer.MinTLSCertDuration(), o.claimer.MaxTLSCertDuration()),
-	}, nil
+	}, "", "", nil
 }
 
 // AuthorizeRenew returns an error if the renewal is disabled.

@@ -151,7 +151,7 @@ func (o *Order) Finalize(ctx context.Context, db DB, csr *x509.CertificateReques
 
 	// Get authorizations from the ACME provisioner.
 	ctx = provisioner.NewContextWithMethod(ctx, provisioner.SignMethod)
-	signOps, err := p.AuthorizeSign(ctx, "")
+	signOps, _, _, err := p.AuthorizeSign(ctx, "")
 	if err != nil {
 		return WrapErrorISE(err, "error retrieving authorization options from ACME provisioner")
 	}
@@ -168,7 +168,7 @@ func (o *Order) Finalize(ctx context.Context, db DB, csr *x509.CertificateReques
 	signOps = append(signOps, templateOptions)
 
 	// Sign a new certificate.
-	certChain, err := auth.Sign(csr, provisioner.SignOptions{
+	certChain, err := auth.Sign("", "", csr, provisioner.SignOptions{
 		NotBefore: provisioner.NewTimeDuration(o.NotBefore),
 		NotAfter:  provisioner.NewTimeDuration(o.NotAfter),
 	}, signOps...)
